@@ -86,9 +86,10 @@ int main(int argc, char **argv){
 
 	sendcnt = N / size;
 	rcvcnt = N / size;
-	levels = (int)(log2(N));
+	levels = (int)(log2(size));
 	
-	int* localA = malloc(sendcnt * sizeof(int));;
+	int* localA = (int*) malloc(sendcnt * sizeof(int));;
+    //int localA[N];
 
 	MPI_Scatter(a, sendcnt, MPI_INT, localA, rcvcnt, MPI_INT, src, MPI_COMM_WORLD);
 
@@ -101,19 +102,25 @@ int main(int argc, char **argv){
 
 
 	for (int i = 0; i<levels; i++){
-	    if (rank&(1<<i)){
-	    printf("up: i=%d rank=%d\n",i,rank);
+	    if (rank&(1<<i) && ((rank>>i)<<i)==rank){
+	    //printf("up: i=%d rank=%d\n",i,rank);
 	        bitonicMerge(localA, 0, sendcnt, descending);
+	        //printf("PC:%d sending to %d\n",rank,rank-(1<<i));
 	        MPI_Send(localA, sendcnt, MPI_INT, rank-(1<<i), 1, MPI_COMM_WORLD);
 	    }
 	    else if (!(rank&(((1<<(i+1))-1)))){
-	    printf("down: i=%d rank=%d\n",i,rank);
+	    //printf("down: i=%d rank=%d\n",i,rank);
 	        bitonicMerge(localA, 0, sendcnt, ascending);
-	        int* localB = realloc(localA, (2*sendcnt*sizeof(int)));
+	        int* localB = (int*) realloc(localA, (2*sendcnt*sizeof(int)));
 	        localA = localB;
-	        print(localA,2*sendcnt);
-	        MPI_Recv(localA+sendcnt, sendcnt, MPI_INT, rank+(1>>i), 1, MPI_COMM_WORLD, &stat);
-            print(localA,2*sendcnt);
+	        //free(localB);
+	        //print(localA,2*sendcnt);
+	        if (rank+(1<<i)<size){
+	            //printf("i:%d PC:%d receiving from %d\n",i,rank,rank+(1<<i));
+	            MPI_Recv(localA+sendcnt, sendcnt, MPI_INT, rank+(1<<i), 1, MPI_COMM_WORLD, &stat);
+                //print(localA,2*sendcnt);
+            }
+            
 	    }
 	    sendcnt *=2;
 	}
@@ -121,8 +128,9 @@ int main(int argc, char **argv){
 	//free(localA);
 
 	if(rank == 0){
+	bitonicMerge(localA, 0, sendcnt, ascending);
 		for(int i=0; i<N; i++){
-			printf("%d ", a[i]);
+			printf("%d ", localA[i]);
 		}
 		printf("\n");
 	}
