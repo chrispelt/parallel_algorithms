@@ -18,6 +18,14 @@ void print(int *arr, int n){
       printf("\n\n");
 }
 
+int CompareAsc(const void * a, const void * b) {
+    return ( * (int *)a - * (int *)b );
+}
+
+int CompareDesc(const void * a, const void * b) {
+    return ( * (int *)b - * (int *)a );
+}
+
 /* This function compares two elements of the sequence and
  * if they follows the given direction they swapped
  */
@@ -95,14 +103,14 @@ int main(int argc, char **argv){
 	if (rank == src){
 	    timer_start = MPI_Wtime();
 	}
-
+	
 	MPI_Scatter(a, sendcnt, MPI_INT, localA, rcvcnt, MPI_INT, src, MPI_COMM_WORLD);
 
     if (rank%2){
-        bitonicSort(localA, sendcnt, descending);
+        qsort(localA, sendcnt, sizeof(int), CompareDesc);
     }
     else {
-        bitonicSort(localA, sendcnt, ascending);
+        qsort(localA, sendcnt, sizeof(int), CompareAsc);
     }    
 
 
@@ -131,13 +139,13 @@ int main(int argc, char **argv){
 	
 	//free(localA);
 
-	if(rank == src){
+	if(rank == 0){
 	    bitonicMerge(localA, 0, sendcnt, ascending);
 	    timer_end = MPI_Wtime();
 		//for(int i=0; i<N; i++){
 		//	printf("%d ", localA[i]);
 		//}
-		//printf("\n");
+		printf("\n");
 		printf("Time taken %f\n", timer_end - timer_start);
 	}
 
